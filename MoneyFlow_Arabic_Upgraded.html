@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#111827">
+<title>MoneyFlow</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f5f7fb;color:#111827}
+.app{max-width:520px;margin:auto;min-height:100vh;padding-bottom:90px}.top{padding:22px 18px 12px;background:#111827;color:white;border-radius:0 0 24px 24px}
+.brand{font-size:27px;font-weight:800}.sub{opacity:.7;font-size:13px;margin-top:4px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}.card{background:white;color:#111827;padding:14px;border-radius:16px}.label{font-size:12px;color:#6b7280}.value{font-size:20px;font-weight:800;margin-top:6px}
+.balance{grid-column:1/-1;background:#1f2937;color:white}.balance .label{color:#cbd5e1}.balance .value{font-size:29px}
+.content{padding:16px}.section{font-size:18px;font-weight:800;margin:8px 0 12px}
+.chart{background:white;border-radius:18px;padding:16px;min-height:180px}.bars{height:120px;display:flex;align-items:end;gap:8px}.bar{flex:1;background:#4f46e5;border-radius:7px 7px 2px 2px;min-height:8px}.days{display:flex;gap:8px;font-size:10px;color:#6b7280}.days span{flex:1;text-align:center}
+.row{display:flex;justify-content:space-between;align-items:center;background:white;padding:14px;border-radius:15px;margin-bottom:9px}.left{display:flex;gap:10px;align-items:center}.icon{width:38px;height:38px;border-radius:12px;background:#eef2ff;display:grid;place-items:center}
+.amount{font-weight:800}.muted{font-size:12px;color:#6b7280;margin-top:3px}
+.bottom{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);background:white;border-top:1px solid #e5e7eb;display:flex;justify-content:space-around;padding:10px 4px 12px;z-index:4}.nav{border:0;background:none;color:#6b7280;font-size:11px}.nav.active{color:#4f46e5;font-weight:800}
+.fab{position:fixed;bottom:70px;right:max(20px,calc((100vw - 520px)/2 + 20px));width:58px;height:58px;border:0;border-radius:50%;background:#4f46e5;color:white;font-size:28px;box-shadow:0 8px 25px #4f46e555}
+.modal{display:none;position:fixed;inset:0;background:#0008;z-index:10;align-items:end}.modal.show{display:flex}.sheet{background:#fff;width:100%;max-width:520px;margin:auto;border-radius:24px 24px 0 0;padding:20px}.sheet h2{margin:0 0 15px}.sheet input,.sheet select{width:100%;padding:13px;border:1px solid #d1d5db;border-radius:12px;margin:7px 0 10px;font-size:15px}.btn{width:100%;padding:14px;border:0;border-radius:13px;background:#4f46e5;color:white;font-weight:800;font-size:15px}.cancel{background:#e5e7eb;color:#111827;margin-top:8px}
+.progress{height:9px;background:#e5e7eb;border-radius:10px;overflow:hidden;margin-top:8px}.progress i{display:block;height:100%;background:#4f46e5}.budget{background:white;border-radius:16px;padding:15px;margin-bottom:10px}
+.empty{text-align:center;color:#6b7280;padding:25px}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top">
+  <div class="brand">MoneyFlow</div><div class="sub">مدير الأموال الذكي</div>
+  <div class="cards">
+    <div class="card balance"><div class="label">Current Balance</div><div class="value" id="balance">EGP 0</div></div>
+    <div class="card"><div class="label">الدخل</div><div class="value" id="income">EGP 0</div></div>
+    <div class="card"><div class="label">المصروفات</div><div class="value" id="expense">EGP 0</div></div>
+  </div>
+</header>
+
+<main class="content" id="home">
+  <div class="section">نظرة عامة على الإنفاق</div>
+  <div class="chart"><div class="bars" id="bars"></div><div class="days"><span>Sat</span><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span></div></div>
+  <div class="section" style="margin-top:22px">الميزانية</div>
+  <div id="budgets"></div>
+  <div class="section" style="margin-top:22px">آخر العمليات</div>
+  <div id="transactions"></div>
+</main>
+
+<button class="fab" onclick="openModal()">+</button>
+<nav class="bottom">
+<button class="nav active" onclick="showHome()">⌂<br>الرئيسية</button>
+<button class="nav" onclick="openModal('income')">＋<br>الدخل</button>
+<button class="nav" onclick="openModal('expense')">−<br>مصروف</button>
+<button class="nav" onclick="alert('التحليل: قارن بين دخلك ومصروفاتك وتصنيفات الإنفاق من لوحة التحكم.')">◔<br>التحليل</button>
+<button class="nav" onclick="if(confirm('مسح كل بيانات MoneyFlow من هذا الجهاز؟')){localStorage.removeItem(KEY);location.reload()}else{alert('بياناتك محفوظة محليًا على هذا الجهاز.')}">⚙<br>الإعدادات</button>
+</nav>
+
+<div class="modal" id="modal">
+ <div class="sheet">
+  <h2 id="modalTitle">إضافة عملية</h2>
+  <select id="type"><option value="expense">مصروف</option><option value="income">الدخل</option></select>
+  <input id="amount" type="number" inputmode="decimal" placeholder="المبلغ (جنيه)">
+  <select id="category">
+   <option>أكل</option><option>مواصلات</option><option>شراء</option><option>فواتير</option><option>ترفيه</option><option>تعليم</option><option>صحة</option><option>أخرى</option>
+  </select>
+  <select id="method"><option>كاش</option><option>بطاقة</option><option>محفظة</option></select>
+  <input id="note" placeholder="ملاحظة (اختياري)">
+  <input id="date" type="date">
+  <button class="btn" onclick="saveTransaction()">حفظ العملية</button>
+  <button class="btn cancel" onclick="closeModal()">إلغاء</button>
+ </div>
+</div>
+
+<script>
+const KEY='moneyflow_v2';
+let data=JSON.parse(localStorage.getItem(KEY)||'{"transactions":[],"budgets":{"أكل":1500,"مواصلات":1000,"شراء":1000,"فواتير":1200}}');
+const money=n=>'EGP '+Number(n||0).toLocaleString('en-EG',{maximumFractionDigits:2});
+function save(){localStorage.setItem(KEY,JSON.stringify(data));render()}
+function openModal(type){
+ document.getElementById('modal').classList.add('show');
+ document.getElementById('type').value=type||'expense';
+ document.getElementById('modalTitle').textContent=(type==='income'?'Add الدخل':'إضافة عملية');
+ document.getElementById('date').value=new Date().toISOString().slice(0,10);
+}
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+function saveTransaction(){
+ const amount=Number(document.getElementById('amount').value);
+ if(!amount||amount<=0){alert('من فضلك أدخل مبلغًا صحيحًا.');return}
+ data.transactions.unshift({id:Date.now(),type:document.getElementById('type').value,amount,category:document.getElementById('category').value,method:document.getElementById('method').value,note:document.getElementById('note').value,date:document.getElementById('date').value});
+ save();closeModal();
+ document.getElementById('amount').value='';document.getElementById('note').value='';
+}
+function render(){
+ let inc=data.transactions.filter(x=>x.type==='income').reduce((a,x)=>a+x.amount,0);
+ let exp=data.transactions.filter(x=>x.type==='expense').reduce((a,x)=>a+x.amount,0);
+ document.getElementById('income').textContent=money(inc);
+ document.getElementById('expense').textContent=money(exp);
+ document.getElementById('balance').textContent=money(inc-exp);
+ const list=document.getElementById('transactions');list.innerHTML='';
+ if(!data.transactions.length) list.innerHTML='<div class="empty">لا توجد عمليات بعد. اضغط + للبدء.</div>';
+ const q=(document.getElementById('search')?.value||'').trim().toLowerCase();
+  const filtered=data.transactions.filter(x=>
+    !q || [x.category,x.method,x.note,x.date].join(' ').toLowerCase().includes(q)
+  );
+  filtered.slice(0,8).forEach(x=>{
+  const sign=x.type==='income'?'+':'−';
+  list.innerHTML+=`<div class="row"><div class="left"><div class="icon">${x.type==='income'?'💰':'💸'}</div><div><b>${({'Food':'أكل','Transport':'مواصلات','Shopping':'شراء','Bills':'فواتير','Entertainment':'ترفيه','Education':'تعليم','Health':'صحة','Other':'أخرى'}[x.category]||x.category)}</b><div class="muted">${x.note||({'Cash':'كاش','Card':'بطاقة','Wallet':'محفظة'}[x.method]||x.method)} • ${x.date}</div></div></div><div class="amount">${sign}${money(x.amount)}</div></div>`;
+ });
+ const b=document.getElementById('budgets');b.innerHTML='';
+ Object.entries(data.budgets).forEach(([cat,limit])=>{
+  const spent=data.transactions.filter(x=>x.type==='expense'&&x.category===cat).reduce((a,x)=>a+x.amount,0);
+  const pct=Math.min(100,Math.round(spent/limit*100));
+  b.innerHTML+=`<div class="budget"><b>${({'Food':'أكل','Transport':'مواصلات','Shopping':'شراء','Bills':'فواتير','Entertainment':'ترفيه','Education':'تعليم','Health':'صحة','Other':'أخرى'}[cat]||cat)}</b><span style="float:right">${money(spent)} / ${money(limit)}</span><div class="progress"><i style="width:${pct}%"></i></div><div class="muted">${pct}% used</div></div>`;
+ });
+ const avg=exp/(data.transactions.filter(x=>x.type==='expense').length||1);
+  document.getElementById('avgExpense').textContent=money(avg);
+  const totals={}; data.transactions.filter(x=>x.type==='expense').forEach(x=>totals[x.category]=(totals[x.category]||0)+x.amount);
+  const top=Object.entries(totals).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('topCategory').textContent=top?`${top[0]} (${money(top[1])})`:'—';
+  const bars=document.getElementById('bars');bars.innerHTML='';
+ const vals=[0,0,0,0,0,0,0];data.transactions.filter(x=>x.type==='expense').forEach(x=>{let d=new Date(x.date||Date.now()).getDay();vals[(d+6)%7]+=x.amount});
+ const max=Math.max(...vals,1);vals.forEach(v=>bars.innerHTML+=`<div class="bar" style="height:${Math.max(8,v/max*100)}%"></div>`);
+}
+function deleteTransaction(id){
+  if(!confirm('هل تريد حذف هذه العملية؟')) return;
+  data.transactions=data.transactions.filter(x=>x.id!==id);
+  save();
+}
+function showHome(){render();window.scrollTo({top:0,behavior:'smooth'})}
+render();
+</script>
+</div>
+</body>
+</html>
